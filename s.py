@@ -59,12 +59,12 @@ while True:
         else:
             for i in trx_id:  
                 j.append(i[0])
-                count+=1
-        b = dict(Counter(j))
-        print(b)
-        s = [key for key, value in b.items() if value > 1]
-        print(s)
-        time.sleep(2)
+            count+=1
+            time.sleep(2)
+    b = dict(Counter(j))
+    print(b)
+    s = [key for key, value in b.items() if value > 1]
+    print(s)
     if len(s) > 0:  
         #send_dingding('事务持续5s未结束,id为{}'.format(s))
         print("报错")
