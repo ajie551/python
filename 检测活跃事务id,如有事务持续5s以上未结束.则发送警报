@@ -49,7 +49,7 @@ while True:
         cursor = db.cursor()
         cursor.execute("select trx_id from  INNODB_TRX;")
         trx_id = cursor.fetchall()
-        j= set()#定义空集合存储3s内事务id的交集
+        j= set()#定义空集合存储5s内事务id的交集
         print(trx_id)
         if len(trx_id) == 0:#判断事务id是否为空,为空则中断进入下一次循环
             time.sleep(2)
