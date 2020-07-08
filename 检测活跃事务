@@ -8,7 +8,7 @@ import MySQLdb
 
 def send_dingding(data_Content):
     # 1、构建url
-    url = "https://oapi.dingtalk.com/robot/send?access_token=3d193af514e746a68b9b9e4b4cf1435a9dc125ff20fd792c8539d3baddb24476"  # url为机器人的webhook
+    url = "xxxxx"  # url为机器人的webhook
     
     # 2、构建一下请求头部
     header = {
@@ -23,7 +23,7 @@ def send_dingding(data_Content):
         },
         "at": {
             "atMobiles": [
-                "18310699089",
+                "xxxxx",
             ],
             "isAtAll": False  # @全体成员（在此可设置@特定某人）
         }
