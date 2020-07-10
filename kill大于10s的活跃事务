@@ -1,16 +1,14 @@
 # 检测活跃事务id,如有事务持续5s以上未结束.则发送警报
 import json
 import time
-import datetime
 import urllib.request
-from collections import Counter  # 引入Counter
 
 import MySQLdb
 
 
 def send_dingding(data_Content):
     # 1、构建url
-    url = "xxxxx"  # url为机器人的webhook
+    url = "xxxxxxx"  # url为机器人的webhook
 
     # 2、构建一下请求头部
     header = {
@@ -25,7 +23,7 @@ def send_dingding(data_Content):
         },
         "at": {
             "atMobiles": [
-                "xxxxx",
+                "xxxxxxx",
             ],
             "isAtAll": False  # @全体成员（在此可设置@特定某人）
         }
@@ -44,34 +42,33 @@ def send_dingding(data_Content):
     # 7、打印返回的结果
     # print(opener.read())
 
-# print(time.localtime())
-# int(time.mktime(timeArray))
+
+db = MySQLdb.connect("xxxxxxx", "xxxxxxx", "xxxxxxx",
+                     "information_schema",
+                     charset='utf8')
 while True:
-    db = MySQLdb.connect("xxxxx", "xxxxx", "xxxxx",
-                         "information_schema",
-                         charset='utf8')
-    cursor = db.cursor()
-    cursor.execute("select a.trx_started,a.trx_mysql_thread_id from INNODB_TRX a ,PROCESSLIST b where a.trx_mysql_thread_id=b.id and b.DB='xxxxx';")
-    print(cursor.rowcount)
-    if cursor.rowcount < 1:
+    try:
+        cursor = db.cursor()
+        cursor.execute(
+            "select a.trx_started,a.trx_mysql_thread_id from INNODB_TRX a ,PROCESSLIST b where a.trx_mysql_thread_id=b.id and b.DB='zhwdb';")
+        if cursor.rowcount < 1:
+            print("没有活跃事务")
+        else:
+            data_trx = cursor.fetchall()
+            for i in data_trx:
+                data_trx_trx_started = i[0]
+                data_trx_trx_mysql_thread_id = i[1]
+                # print(data_trx_trx_started, data_trx_trx_mysql_thread_id)
+                #print(time.time(), time.mktime(time.strptime(str(data_trx_trx_started), "%Y-%m-%d %H:%M:%S")))
+                # print(time.time() - time.mktime(time.strptime(str(data_trx_trx_started), "%Y-%m-%d %H:%M:%S")))
+                # time.sleep(3)
+                if time.time() - time.mktime(time.strptime(str(data_trx_trx_started), "%Y-%m-%d %H:%M:%S")) > 10:
+                    cursor.execute("kill connection {} ;".format(data_trx_trx_mysql_thread_id))
+                else:
+                    send_dingding("有活跃事务,但不大于10s")
+                    continue
+        time.sleep(1)
         cursor.close()
-        print("没有活跃事务")
-        time.sleep(3)
+    except:
         continue
-    else:
-        data_trx = cursor.fetchall()
-        for i in data_trx:
-            data_trx_trx_started = i[0]
-            data_trx_trx_mysql_thread_id = i[1]
-            print(data_trx_trx_started,data_trx_trx_mysql_thread_id)
-            print((datetime.datetime.now() -datetime.datetime.strptime(str(data_trx_trx_started), "%Y-%m-%d %H:%M:%S")).seconds)
-            time.sleep(3)
-            if (datetime.datetime.now() -datetime.datetime.strptime(str(data_trx_trx_started), "%Y-%m-%d %H:%M:%S")).seconds > 10:
-                cursor.execute("kill connection {} ;".format(data_trx_trx_mysql_thread_id))
-                cursor.close()
-            else:
-                cursor.close()
-                time.sleep(3)
-                print("有活跃事务,但不大于10s")
-                continue
-    db.close()
+db.close()
