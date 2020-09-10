@@ -92,3 +92,21 @@ if __name__ == '__main__':
 		locals()['thread' + i] = EsConsumer(topic, gid, name_srv, ak, sk, channel, fields, dml_type, es_node, es_index,
 		                                    es_type)
 		locals()['thread' + i].start()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
