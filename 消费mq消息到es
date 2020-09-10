@@ -1,0 +1,94 @@
+# -*- coding: utf-8 -*-
+import json
+from elasticsearch import Elasticsearch
+from rocketmq.client import PushConsumer, ConsumeStatus
+import time
+import configparser
+import os, re
+from multiprocessing import Process
+
+
+class EsConsumer(Process):
+	def __init__(self, topic, gid, name_srv, ak, sk, channel, fields, dml_type, es_node, es_index, es_type):
+		super().__init__()
+		self.topic = topic
+		self.gid = gid
+		self.name_srv = name_srv
+		self.ak = ak
+		self.sk = sk
+		self.channel = channel
+		self.fields = fields
+		self.es_node = es_node
+		self.dml_type = dml_type
+		self.es_index = es_index
+		self.es_type = es_type
+
+	def change_dict(self, msg):
+
+		str_msg_body = msg.replace('"isDdl":false', '"isDdl":"false"').replace('"isDdl":true',
+		                                                                       '"isDdl":"true"').replace(
+			'"old":null', '"old":"null"')
+		dict_msg_body = json.loads(str_msg_body)
+		return dict_msg_body
+
+	def orderly_callback(self, msg):
+		xiaofei_start_time = time.time()
+		msg_body = msg.body.decode('utf8')
+		data = self.change_dict(msg_body)['data'][0]
+		data_id = data['id']
+		type1 = self.change_dict(msg_body)['type']
+		if type1 in self.dml_type and (type1 == 'UPDATE' or type1 == 'INSERT'):
+			a = '{"index": {"_index": "' + '{}'.format(es_index) + '", "_type": "' + '{}'.format(
+				es_type) + '", "_id": "' + '{}'.format(data_id) + '"}}\n'
+			s = ''
+			for i in fields:
+				s = s + '"' + i + '"' + ':' + '"' + data[i] + '"' + ','
+			s = '{' + s + '}'
+			s = s.replace(',}', '}\n')
+			a = a + s
+		elif type1 in self.dml_type and type1 == 'DELETE':
+			a = '{"delete": {"_index": "' + '{}'.format(es_index) + '", "_type": "' + '{}'.format(
+				es_type) + '", "_id": "' + '{}'.format(data_id) + '"}}\n'
+		else:
+			print('dml_type配置错误')
+			exit()
+		ES = Elasticsearch(self.es_node)
+		sucess = ES.bulk(body=a)
+		print(sucess)
+		return ConsumeStatus.CONSUME_SUCCESS
+
+	def run(self):
+		consumer = PushConsumer(self.gid, True)
+		consumer.set_name_server_address(self.name_srv)
+		consumer.set_session_credentials(self.ak, self.sk, self.channel)
+		consumer.subscribe(self.topic, self.orderly_callback)
+		print('start orderly consume message')
+		consumer.start()
+		while True:
+			time.sleep(3600)
+
+
+if __name__ == '__main__':
+	ini = ','.join(os.listdir(os.getcwd()))
+	find_ini = re.compile(r'[0-9a-zA-Z]+\.ini')
+	find_ini_list = find_ini.findall(ini)
+	for i in find_ini_list:
+		config = configparser.ConfigParser()
+		config.read(i, encoding='utf-8')
+		topic = config.get('source', 'topic')
+		gid = config.get('source', 'gid')
+		name_srv = config.get('source', 'name_srv')
+		ak = config.get('source', 'ak')
+		sk = config.get('source', 'sk')
+		channel = config.get('source', 'channel')
+		fields = config.get('source', 'fields').lower().split(',')
+		dml_type = config.get('source', 'dml_type').upper().split(',')
+		batchsize = config.get('source', 'batchsize')
+		es_host = config.get('source', 'es_host').split(',')
+		es_port = config.get('source', 'es_port')
+		es_node = [j + ':' + es_port for j in es_host]
+		es_index = config.get('source', 'es_index')
+		es_type = config.get('source', 'es_type')
+		locals()['thread' + i] = EsConsumer(topic, gid, name_srv, ak, sk, channel, fields, dml_type, es_node, es_index,
+		                                    es_type)
+		locals()['thread' + i].start()
