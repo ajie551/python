@@ -26,10 +26,8 @@ if __name__ == '__main__':
     sum_stop = 446082807
     thread_sum = 8
     sum_range = (sum_stop - sum_start) / thread_sum
-    process_list = []
     for i in range(thread_sum):  # 开启8个子进程执行fun1函数
         start = sum_start + i * sum_range
         stop = sum_start + (i + 1) * sum_range
         p = Process(target=fun1, args=(start, stop))  # 实例化进程对象
         p.start()
-        p.join()
